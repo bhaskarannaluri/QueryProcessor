@@ -141,7 +141,71 @@ public class SQLSplitter {
 	public  void splitInsertSQL(String sql){
 		//Transformation findings
 		exportRowValues.put(Constants.COLUMN9, findTransformations(sql));
-		
+		/**
+		 * Finding the target Schema, Table
+		 */
+		String st = sql.substring(sql.indexOf("INSERT INTO"), sql.indexOf("("));
+		st = st.replace("INSERT INTO", "");
+		String[] schema = seperateSchema(st);
+		if(schema.length>0){
+			exportRowValues.put(Constants.COLUMN3, schema[0]);
+			exportRowValues.put(Constants.COLUMN4, schema[1]);
+		}
+		/**
+		 * Finding the target columns
+		 */
+		if(sql.contains("(") && sql.contains(")")){
+			st =  sql.substring(sql.indexOf("(")+1, sql.indexOf(")"));
+		}
+		//st = st.replace("(", "").trim();
+		String[] tarCols = seperateSchema(st);
+		exportRowValues.put(Constants.COLUMN5, tarCols[1]);
+		/**
+		 * Finding the Source columns
+		 */
+		if(sql.contains("SELECT")){
+			String srcCol = sql.substring(sql.indexOf("SELECT"));
+			//Source Table will be defined between FROm and WHERE
+			String srcTbl = srcCol.substring(srcCol.indexOf("FROM"));
+			srcCol = srcCol.substring(srcCol.indexOf("SELECT"),srcCol.indexOf("FROM"));
+			srcCol = srcCol.replace("SELECT", "").trim();
+			String[] cols = seperateSchema(srcCol);
+			exportRowValues.put(Constants.COLUMN8, cols[1]);
+			
+			/**
+			 * Finding Source Table
+			 */
+			if(srcTbl.contains("WHERE")){
+				srcTbl = srcTbl.substring(srcTbl.indexOf("FROM"), srcTbl.indexOf("WHERE"));
+				srcTbl = srcTbl.replace("FROM", "");
+				if(!srcTbl.contains("JOIN")){
+					String[] src = seperateSchema(srcTbl);
+					exportRowValues.put(Constants.COLUMN6, cols[0]);
+					exportRowValues.put(Constants.COLUMN7, cols[1]);
+				}else{
+					String table1 = srcTbl.substring(0,srcTbl.indexOf("JOIN"));
+					String table2 = srcTbl.substring(srcTbl.indexOf("JOIN"),srcTbl.indexOf("ON"));
+					table2 = table2.replace("JOIN", "");
+					String t="";
+					String sc="";
+					if(table1.contains(".")){
+						sc = table1.substring(0, table1.indexOf("."))+"\n";
+						t = table1.substring(table1.indexOf(".")+1)+"\n";
+					}else{
+						t = table1+"\n";
+					}
+					if(table2.contains(".")){
+						sc = table2.substring(0, table2.indexOf("."))+"\n";
+						t = table2.substring(table2.indexOf(".")+1)+"\n";
+					}else{
+						t = table2;
+					}
+					exportRowValues.put(Constants.COLUMN6, sc);
+					exportRowValues.put(Constants.COLUMN7, t);
+				}
+			}
+		}
+
 	}
 	/**
 	 * If the sql contains statement like a1.tab1,a2.tab2 then it gives output as String[]{{a1 a2},{tab1 tab2}}
