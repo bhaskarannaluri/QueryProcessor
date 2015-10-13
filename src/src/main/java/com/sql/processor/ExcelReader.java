@@ -12,6 +12,7 @@ import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.util.SystemOutLogger;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -101,7 +102,6 @@ public class ExcelReader {
 	                {
 			                cell = cellIterator.next();
 			                String cellValue ="";
-		
 			                switch (cell.getCellType()) 
 			                {
 		
@@ -112,7 +112,7 @@ public class ExcelReader {
 		
 			                case Cell.CELL_TYPE_NUMERIC:
 			                        //System.out.println(cell.getNumericCellValue());
-			                        cellValue  = ""+cell.getNumericCellValue();
+			                        cellValue  = ""+(int)cell.getNumericCellValue();
 			                        break;
 		
 			                case Cell.CELL_TYPE_STRING:
