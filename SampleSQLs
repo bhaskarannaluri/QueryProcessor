@@ -1,0 +1,236 @@
+1)"DELETE FROM EDW_SUM_VW.gl_product_assignment_hist
+WHERE PROD_YEAR_MONTH =<rev_year_month>
+AND gpc_type IS NOT NULL;"
+2)" DELETE FROM  EDW_SUM_VW.DIM_PROD
+ WHERE  wh_prod_sk IN 
+ (
+ SEL GPC.prod_sk
+FROM  edw_sum_vw.gpc_prod GPC
+ 
+ JOIN EDW_METADATA_VW.SYS_PARM PARM    
+ ON 1=1           AND PARM.parm_name='RACE_VZT_MTH'
+
+ JOIN EDW_SUM_vw.PROD_HIER_LVL_HIST PROD
+ ON PROD.l8_prod_id = GPC.prod_id
+ AND prod.prod_year_month=PARM.parm_val1   
+
+ JOIN EDW_SUM_VW.GL_PRODUCT_ASSIGNMENT_HIST GL
+ ON GPC.bill_ind_set_id = GL.map_sur_key
+ AND GL.prod_year_month =PARM.parm_val1
+ AND GPC.extrc_yr_mth  =PARM.parm_val1 
+ GROUP BY 1 )
+ 
+ AND EDW_SUM_VW.DIM_PROD.PROD_YEAR_MONTH IN (SELECT parm_val1 GROUP BY 1 FROM EDW_METADATA.SYS_PARM WHERE parm_name='RACE_VZT_MTH')  
+ 
+"
+3)"INSERT INTO EDW_TEMP.TMP_20S_<SRC>
+ (ORIG_BAN_NUM,
+  ORIG_MAN_NUM,
+  BILL_DATE,
+  ENT_CODE,
+  TEXT_1,
+  TEXT_2,
+  SPCL_PRCS_CODE,
+  PRCS_CTRL_ID)
+SELECT CAP.BAN AS CAP_BAN,
+     CAP.MAN AS CAP_MAN,
+     CAP.BILL_DATE,
+     CAP.ENT_CODE,
+     S20.TEXT_1 AS TEXT_1,
+     S20.TEXT_2 AS TEXT_2,
+     SPCL_PRCS_CODE,
+     <CTRL>
+FROM EDW_STG.VZ20S_<SRC> S20
+JOIN EDW_STG.VZCAP_<SRC> CAP  
+  ON CAP.CAP_ID =S20.CAP_ID
+ AND CAP.REC_NUM = 25
+ AND CAP.SUB_REC_NUM=20
+ 
+WHERE S20.TEXT_CODE = 'PREBLINV'
+ AND CAP_BAN <> TEXT_1
+ AND CAP_MAN <> TEXT_1
+ AND ENT_CODE <> '09074'
+GROUP BY 1,2,3,4,5,6,7 
+
+UNION ALL 
+
+
+SELECT CAP_BAN,
+     CAP_MAN,
+     BILL_DATE,
+     ENT_CODE,
+     TEXT_1,
+     TEXT_2,
+     SPCL_PRCS_CODE,
+     <CTRL>
+FROM (SELECT CAP.BAN AS CAP_BAN,
+             CAP.MAN AS CAP_MAN,
+             CAP.BILL_DATE,
+             CAP.ENT_CODE,
+             S20.TEXT_1 AS TEXT_1,
+             S20.TEXT_2 AS TEXT_2,
+             SPCL_PRCS_CODE,
+             CASE WHEN SPCL_PRCS_CODE = 'I' THEN SPCL_PRCS_CODE 
+                  ELSE 'Z' 
+              END AS SPCL_PRCS_CODE_NEW
+        FROM EDW_STG.VZ20S_<SRC> S20
+        JOIN EDW_STG.VZCAP_<SRC> CAP  
+          ON CAP.CAP_ID =S20.CAP_ID
+         AND CAP.REC_NUM = 25
+         AND CAP.SUB_REC_NUM=20
+       WHERE S20.TEXT_CODE = 'PREBLINV'
+         AND CAP_BAN <> TEXT_1
+         AND CAP_MAN <> TEXT_1
+         AND ENT_CODE = '09074'
+       GROUP BY CAP_BAN,CAP_MAN,ENT_CODE,BILL_DATE
+     QUALIFY RANK(SPCL_PRCS_CODE_NEW ASC) = 1
+) ENT_EQL
+GROUP BY 1,2,3,4,5,6,7 ;
+       "
+4)"UPDATE WGP FROM EDW_BASE_VW.WH_GPC_PROD_ASGNMT WGP,
+ (
+ SELECT 
+ map_sur_key,
+ prod_year_month,
+ gpc_type,
+ BILL_IND_01_VLU,
+ BILL_IND_02_VLU
+ 
+ FROM EDW_SUM_VW.GL_PRODUCT_ASSIGNMENT_HIST HIST
+ 
+ JOIN EDW_BASE_VW.UPSTRM_SYS_BILL_IND BIND
+  ON HIST.gpc_type = BIND.gpc_type
+ AND BIND.bill_ind_num = 1 
+ AND HIST.BILL_IND_01_VLU IS NOT NULL 
+ AND HIST.BILL_IND_01_VLU <> ''
+GROUP BY  1,2,3,4,5,6,7
+ 
+ WHERE gpc_type = 'ARIA'
+ )GPA
+ SET map_sur_sk=GPA.map_sur_key
+    ,update_tms=CURRENT_TIMESTAMP(0)
+    ,prcs_ctrl_sk = <ctrl>
+ WHERE  WGP.gpc_type=GPA.gpc_type AND 
+ Map_sur_sk IS NULL
+ AND TRIM(GPA.BILL_IND_01_VLU)=TRIM(WGP.GPC_ID_01_VAL)
+ AND TRIM(GPA.BILL_IND_02_VLU)=TRIM(WGP.GPC_ID_02_VAL)
+ AND GPA.prod_year_month = <rev_year_month>;"
+5)"UPDATE H1 FROM
+EDW_BASE_VW.BILL_IND_SET_HIST H1
+, EDW_BASE_VW.BILL_IND_SET_HIST H2
+SET end_date = H2.start_date
+WHERE H1.bill_ind_set_id = H2.bill_ind_set_id
+AND h1.gpc_type = h2.gpc_type
+AND h1.end_date IS NULL
+AND H2.end_date IS NULL
+AND (H1.start_date < H2.start_date  OR ( H1.start_date = H2.start_date  AND H1.create_dttm < H2.create_dttm)) ;
+"
+6)"
+       INSERT INTO EDW_TEMP.TMP_GEO_<src>
+     (
+      man 
+     ,ban 
+     ,bill_inv_sk
+     ,item_id
+     ,tax_eng_type      
+     ,juris_code 
+     ,crir_idn_code
+     ,crir_cat
+     ,oof_ind
+     ,bill_geo
+     ,fin_geo
+     ,src_sys_id
+     ,bill_cyc_num
+     ,inv_ym
+     ,ar_comp_code 
+     ,txn_comp_code 
+     ,prcs_ctrl_id  
+     )
+     SEL 
+  BILL_GEO.man,
+        BILL_GEO.ban,
+        BILL_GEO.bill_inv_sk,
+        BILL_GEO.item_id,
+        BILL_GEO.tax_eng_type,
+        BILL_GEO.juris_code,
+        BILL_GEO.crir_idn_code,
+        BILL_GEO.crir_cat,
+        BILL_GEO.oof_ind,
+        BILL_GEO.billing_geo,
+        COALESCE(
+        CASE
+            WHEN BILL_GEO.R10comp_code = TRV370.key_val_01 AND BILL_GEO.man <> BILL_GEO.ban AND BILL_GEO.CRIR_CAT = 'LEC' THEN
+        CASE
+            WHEN SUBSTR(BILL_GEO.billing_geo,1,2) = 'TX' THEN 'TXG'
+            WHEN SUBSTR(BILL_GEO.billing_geo,1,2) = 'CA' THEN 'CAG'
+            WHEN SUBSTR(BILL_GEO.billing_geo,1,2) = 'VA' THEN 'VAC'
+            WHEN SUBSTR(BILL_GEO.billing_geo,1,2) = 'PA' THEN 'PAB'              ELSE NULL
+        END ELSE NULL
+        END,          
+       TRV355.ret_val,TRV354_LEC.ret_val,TRV354_NON_LEC.ret_val,TRV366.ret_val) AS fin_geo,
+            BILL_GEO.src_sys_id,
+            BILL_GEO.bill_cyc_num,
+            BILL_GEO.inv_ym,
+            COALESCE(TRV371.ret_val, TRV358.ret_val,'UA') AS ar_comp_code,
+            COALESCE(TRV356.ret_val, TRV357.ret_val, ar_comp_code) AS transaction_comp_code,
+            <ctrl>
+        FROM                  
+(
+        SEL 
+  OOF_IND.man,
+            OOF_IND.ban,
+            OOF_IND.tax_eng_type,
+            OOF_IND.juris_code,
+            OOF_IND.crir_idn_code,
+            OOF_IND.crir_cat,
+            OOF_IND.src_sys_id,
+            OOF_IND.oof_ind,
+            OOF_IND.lgl_ent_code,
+            OOF_IND.bill_cyc_num,
+            OOF_IND.inv_ym,
+            OOF_IND.bill_inv_sk,
+            OOF_IND.item_id,
+            COALESCE(
+            CASE
+                WHEN OOF_IND.R10comp_code = TRV370.key_val_01 AND OOF_IND.man <> OOF_IND.ban THEN SUBSTR(OOF_IND.juris_code,1,2) ELSE NULL
+            END,
+            CASE
+                WHEN OOF_IND.R10comp_code = TRV370.key_val_01 AND OOF_IND.man = OOF_IND.ban THEN TRV370.ret_val  ELSE NULL
+            END ,   
+    TRV361.ret_val,TRV364.ret_val,TADS.vtlm_situs_state,OOF_IND.ST_CODE) AS billing_geo_lkup,
+                
+            CASE
+                WHEN SRC.reg_ind = 'N' THEN billing_geo_lkup ELSE COALESCE(TRV362.ret_val,OOF_IND.ST_CODE)
+            END AS billing_geo,
+                OOF_IND.ST_CODE,
+                OOF_IND.R10st_code,
+                OOF_IND.comp_code,
+                OOF_IND.geo_code,
+                OOF_IND.R10comp_code,
+                OOF_IND.tax_legal_ent_code,
+                OOF_IND.ent_code
+            FROM                  
+EDW_TEMP.TMP_OOF_IND_<src> OOF_IND
+
+LEFT JOIN (
+            SEL abbrn_juris,
+                src_geo_scheme,
+                vtlm_situs_state
+                FROM EDW_METADATA_VW.TADS_ABBRN_JURIS )TADS ON OOF_IND.juris_code = TADS.abbrn_juris AND OOF_IND.tax_eng_type = TADS.src_geo_scheme
+LEFT JOIN EDW_METADATA_VW.SRC_SYS_NUM SRC ON OOF_IND.src_sys_id = SRC.src_sys_num
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV370 ON 1=1 AND TRV370.rule_num = 370
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV361 ON COALESCE(OOF_IND.lgl_ent_code, OOF_IND.tax_legal_ent_code) LIKE TRV361.key_val_01    AND TRV361.rule_num = 361
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV364  ON OOF_IND.crir_cat = TRV364.key_val_01 AND COALESCE(OOF_IND.lgl_ent_code, OOF_IND.tax_legal_ent_code) = TRV364.key_val_02     AND OOF_IND.ST_CODE = TRV364.key_val_03 AND TRV364.rule_num = 364
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV362 ON billing_geo_lkup = TRV362.key_val_01 AND TRV362.rule_num = 362
+) BILL_GEO 
+LEFT JOIN EDW_METADATA_VW.SRC_SYS_NUM SRC ON BILL_GEO.src_sys_id = SRC.src_sys_num
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV370 ON 1=1 AND TRV370.rule_num = 370
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV355 ON TRIM(BILL_GEO.crir_cat) = TRIM(TRV355.key_val_01) AND SRC.src_sys_num = TRV355.src_sys_num AND COALESCE(BILL_GEO.lgl_ent_code, BILL_GEO.tax_legal_ent_code)  LIKE TRV355.key_val_02     AND BILL_GEO.oof_ind = TRV355.key_val_03 AND TRV355.rule_num = 355
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV354_LEC ON TRIM(BILL_GEO.crir_cat) = TRIM(TRV354_LEC.key_val_01) AND TRIM(BILL_GEO.billing_geo) = TRIM(TRV354_LEC.key_val_02) AND BILL_GEO.oof_ind = TRV354_LEC.key_val_03 AND TRV354_LEC.rule_num = 354
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV354_NON_LEC  ON TRIM(BILL_GEO.billing_geo) = TRIM(TRV354_NON_LEC.key_val_02) AND TRIM(TRV354_NON_LEC.key_val_01) = 'NON_LEC' AND TRV354_NON_LEC.rule_num = 354
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV366 ON SRC.reg_ind = TRV366.key_val_01 AND TRV366.rule_num = 366 
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV371 ON   TRV371.src_sys_num = SRC.src_sys_num AND  COALESCE(BILL_GEO.lgl_ent_code,BILL_GEO.tax_legal_ent_code,BILL_GEO.ent_code) LIKE TRV371.key_val_01 AND  TRV371.rule_num = 371
+LEFT JOIN  EDW_METADATA_VW.TRNFRM_RULE_VAL TRV358 ON   TRV358.src_sys_num = SRC.src_sys_num AND  BILL_GEO.R10comp_code = TRV358.key_val_01 AND  BILL_GEO.R10st_code = TRV358.key_val_02 AND  TRV358.rule_num = 358
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV356 ON BILL_GEO.crir_cat = TRV356.key_val_01 AND fin_geo = TRV356.key_val_02 AND TRV356.rule_num = 356
+LEFT JOIN EDW_METADATA_VW.TRNFRM_RULE_VAL TRV357 ON BILL_GEO.crir_idn_code = TRV357.key_val_01 AND TRV357.rule_num = 357;
+     "
