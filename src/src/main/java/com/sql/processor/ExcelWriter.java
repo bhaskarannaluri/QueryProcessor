@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.lang.SystemUtils;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -73,6 +74,8 @@ public class ExcelWriter {
 		 
 		 int rownum =1;
 		 if(insertRows!=null && !insertRows.isEmpty()){
+			 	//Sorting the entries
+			 	insertRows = sortEntries(insertRows);
 				Set<String> rows = insertRows.keySet();
 				System.out.print("the rows is "+rows);
 				for(String s:rows){
@@ -97,5 +100,8 @@ public class ExcelWriter {
 		}catch(Exception e ){
 			
 		}
+	}
+	public Map<String,Map<String,String>> sortEntries(Map<String,Map<String,String>> map){
+		return new TreeMap<String,Map<String,String>>(map);
 	}
 }
