@@ -14,6 +14,8 @@ import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -53,6 +55,12 @@ public class ExcelWriter {
 		 fileOut = new FileOutputStream("D:\\test"+Calendar.getInstance().getTimeInMillis()+".xls");
 		 workbook = new HSSFWorkbook();
 		 worksheet = workbook.createSheet("SQL Analysis");
+		 //Font Bold style
+		 CellStyle style = workbook.createCellStyle();//Create style
+		 Font font = workbook.createFont();//Create font
+		 font.setBoldweight(Font.BOLDWEIGHT_BOLD);//Make font bold
+		 style.setFont(font);//set it to bold
+
 		 //Header Row inserting
 		 initHeader();
 		 HSSFRow row = worksheet.createRow(0);
@@ -60,6 +68,7 @@ public class ExcelWriter {
 		 for(String s:headerRow){
 			 Cell cell =row.createCell(cellnum++);
 			 cell.setCellValue((String)s);
+			 cell.setCellStyle(style);
 		 }
 		 
 		 int rownum =1;
