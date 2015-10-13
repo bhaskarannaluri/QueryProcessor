@@ -12,7 +12,7 @@ public class SqlProcessor {
 	{
 	        File inputFile = new File("D:\\input.xls");
 	        ExcelReader. readXls(inputFile);
-	        new ExcelWriter().initXls();
+	        WriterHelper.getWriter().initXls();
 	}
 
 }

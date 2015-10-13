@@ -106,32 +106,32 @@ public class ExcelReader {
 			                {
 		
 			                case Cell.CELL_TYPE_BOOLEAN:
-			                        System.out.println(cell.getBooleanCellValue());
+			                        //System.out.println(cell.getBooleanCellValue());
 			                        cellValue = ""+cell.getBooleanCellValue();
 			                        break;
 		
 			                case Cell.CELL_TYPE_NUMERIC:
-			                        System.out.println(cell.getNumericCellValue());
+			                        //System.out.println(cell.getNumericCellValue());
 			                        cellValue  = ""+cell.getNumericCellValue();
 			                        break;
 		
 			                case Cell.CELL_TYPE_STRING:
-			                        System.out.println(cell.getStringCellValue());
+			                       // System.out.println(cell.getStringCellValue());
 			                        cellValue = ""+cell.getStringCellValue();
 			                        break;
 		
 			                case Cell.CELL_TYPE_BLANK:
-			                        System.out.println(" ");
+			                        //System.out.println(" ");
 			                        cellValue = " ";
 			                        break;
 		
 			                default:
-			                        System.out.println(cell);
+			                        //System.out.println(cell);
 			                }
 	                
 	                cellValues.add(cellValue);
 	                }
-	                System.out.println("The List is "+cellValues);
+	                //System.out.println("The List is "+cellValues);
 	                new SQLSplitter().processExcel(cellValues);
 	        }
 

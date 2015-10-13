@@ -3,10 +3,13 @@ package com.sql.processor;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang.SystemUtils;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -16,11 +19,15 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class ExcelWriter {
 	private List<String> headerRow;
-	private Map<String,Map<String,String>> insertRows;
+	private Map<String,Map<String,String>> insertRows = new HashMap<String,Map<String,String>>();
 	FileOutputStream fileOut;
 	HSSFWorkbook workbook ;
 	HSSFSheet worksheet;
-	int rowNum;
+	
+	
+	protected ExcelWriter(){
+		
+	}
 	
 	public Map<String, Map<String, String>> getInsertRows() {
 		return insertRows;
@@ -30,21 +37,20 @@ public class ExcelWriter {
 	}
 	public void initHeader(){
 		headerRow = new ArrayList<String>();
-		headerRow.add(Constants.COLUMN1);
 		headerRow.add(Constants.COLUMN2);
+		headerRow.add(Constants.COLUMN1);
+		headerRow.add(Constants.COLUMN3);
+		headerRow.add(Constants.COLUMN4);
+		headerRow.add(Constants.COLUMN5);
+		headerRow.add(Constants.COLUMN6);
+		headerRow.add(Constants.COLUMN7);
+		headerRow.add(Constants.COLUMN8);
+		headerRow.add(Constants.COLUMN9);
 	}
-	public void writeExcel(){
-		if(insertRows!=null && !insertRows.isEmpty()){
-			Set<String> rows = insertRows.keySet();
-
-			for(String s:rows){
-				Map<String,String> row = insertRows.get(s);
-			}
-		}
-	}
+	
 	public void initXls(){
 		try{
-		 fileOut = new FileOutputStream("D:\\test.xls");
+		 fileOut = new FileOutputStream("D:\\test"+Calendar.getInstance().getTimeInMillis()+".xls");
 		 workbook = new HSSFWorkbook();
 		 worksheet = workbook.createSheet("SQL Analysis");
 		 //Header Row inserting
@@ -55,6 +61,26 @@ public class ExcelWriter {
 			 Cell cell =row.createCell(cellnum++);
 			 cell.setCellValue((String)s);
 		 }
+		 
+		 int rownum =1;
+		 if(insertRows!=null && !insertRows.isEmpty()){
+				Set<String> rows = insertRows.keySet();
+				System.out.print("the rows is "+rows);
+				for(String s:rows){
+					 HSSFRow tempRow = worksheet.createRow(rownum++);
+					Map<String,String> rowItem = insertRows.get(s);
+					//Reset Cellnumber
+					 cellnum=0;
+					 for(String str:headerRow){
+						 Cell cell =tempRow.createCell(cellnum++);
+						 if(rowItem.containsKey(str)){
+							 cell.setCellValue((String)rowItem.get(str));
+						 }else{
+							 cell.setCellValue((String)"NA");
+						 }
+					 }
+				}
+			}
 		 workbook.write(fileOut);
 		 fileOut.flush();
 		 fileOut.close();
