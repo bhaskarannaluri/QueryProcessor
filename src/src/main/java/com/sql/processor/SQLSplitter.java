@@ -66,8 +66,8 @@ public class SQLSplitter {
 				}else{
 					table = table.concat(st+"\n");
 				}
-				System.out.println("The split is "+st.substring(0, st.indexOf(".")));
-				System.out.println("The split is "+st.substring(st.indexOf(".")+1));
+				//System.out.println("The split is "+st.substring(0, st.indexOf(".")));
+				//System.out.println("The split is "+st.substring(st.indexOf(".")+1));
 			}
 		}
 		if(StringUtils.isNotBlank(schema)){
@@ -112,7 +112,7 @@ public class SQLSplitter {
 			}
 			System.out.println("SET statement is   "+targetColumns);
 
-			targetColumns = targetColumns.replace("SET", "").trim();
+			targetColumns = targetColumns.replace("SET ", "").trim();
 			String targetColumn = "";
 			//If simple UPdate statement without having select statement 
 			if(!targetColumns.contains("SELECT")){
@@ -132,7 +132,38 @@ public class SQLSplitter {
 				exportRowValues.put(Constants.COLUMN5, targetColumn);
 			}
 		}
-		
+		/**
+		 * Getting the Table and Schema name
+		 */
+		String table = sql.substring(0, sql.indexOf("SET "));
+		table = table.replace("UPDATE", "").trim();
+		System.out.println("The Update sql  is "+table);
+		if(table.contains("FROM")){
+			 String alias = table.substring(0, table.indexOf("FROM")).trim();
+			 System.out.println("The alis is "+alias);
+			 table = table.replace(table.substring(0,table.indexOf("FROM")), "").replace("FROM","").trim();
+			 System.out.println("After from is "+table);
+			 table = table.substring(0,table.indexOf(alias)).trim();
+			 System.out.println("The last  "+table);
+
+			 if(table.contains(",")){
+				 //IF , is there then the meaning is the last statement is the table and schema
+				 table = table.substring(table.indexOf(",")).replace(",", "").trim();
+				 String[] tt = seperateSchema(table);
+				 exportRowValues.put(Constants.COLUMN3, tt[0]);
+				 exportRowValues.put(Constants.COLUMN4, tt[1]);
+			 }else{
+				 String[] tt = seperateSchema(table);
+				 exportRowValues.put(Constants.COLUMN3, tt[0]);
+				 exportRowValues.put(Constants.COLUMN4, tt[1]); 
+			 }
+			 
+		}else{
+			//For normat update queries
+			String[] tt = seperateSchema(table);
+			exportRowValues.put(Constants.COLUMN3, tt[0]);
+			exportRowValues.put(Constants.COLUMN4, tt[1]);
+		}
 		
 	}
 	/**

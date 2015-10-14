@@ -9,7 +9,7 @@ public class Constants {
 	public static final String COLUMN6="Source Schema/Database";
 	public static final String COLUMN7="Source Table";
 	public static final String COLUMN8="Source Column";
-	public static final String COLUMN9="Transofmation";
+	public static final String COLUMN9="Transformation";
 
 	
 	public static final String INSERT ="INSERT";
